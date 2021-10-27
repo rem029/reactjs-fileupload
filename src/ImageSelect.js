@@ -1,22 +1,50 @@
-import { useEffect, useRef, useState } from 'react';
+import { useMemo, useRef, useState, memo } from 'react';
 
+const imageSchema = { image: '', preview: '', isReading: false };
 const ImageSelect = ({ buttonSelectText = 'Image', multipleFiles = false, className = '' }) => {
-  const [imagePreviews, setImagePreviews] = useState([]);
   const [images, setImages] = useState([]);
   const fileInputRef = useRef();
+
+  const imagesCount = useMemo(() => {
+    return images.length;
+  }, [images]);
+
+  const preparePreviewImage = (index, imageToUpdate) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      console.log('reader onload');
+
+      imageToUpdate.preview = reader.result;
+      imageToUpdate.isReading = false;
+      imageUpdateByIndex(index, imageToUpdate);
+    };
+
+    reader.readAsDataURL(imageToUpdate.image);
+  };
 
   const onImageSelectClick = (event) => {
     event.preventDefault();
     fileInputRef.current.click();
   };
 
-  const onImageRemoveClick = (id) => {
-    console.log('@image remove id', id);
-
-    setImages((currentImages) => currentImages.filter((image, index) => index !== id));
+  const imageDeleteByIndex = (index) => {
+    setImages((currentImages) => currentImages.filter((image, imageIndex) => imageIndex !== index));
   };
 
-  const onImageSelect = (event) => {
+  const imageDeleteAll = () => {
+    setImages([]);
+  };
+
+  const imageUpdateByIndex = (index, imageUpdate) => {
+    setImages((currentImages) => {
+      let newImages = [...currentImages];
+      newImages[index] = imageUpdate;
+      return newImages;
+    });
+  };
+
+  const imageAdd = (event) => {
     let files;
     let fileIndex;
 
@@ -25,24 +53,12 @@ const ImageSelect = ({ buttonSelectText = 'Image', multipleFiles = false, classN
     for (fileIndex = 0; fileIndex < files.length; fileIndex++) {
       const currentFile = files[fileIndex];
       if (currentFile && currentFile.type.substring(0, 5) === 'image') {
-        setImages((currentFiles) => [...currentFiles, currentFile]);
+        const newImage = { image: currentFile, preview: '', isReading: true };
+        preparePreviewImage(fileIndex, newImage);
+        setImages((currentFiles) => [...currentFiles, newImage]);
       }
     }
   };
-
-  useEffect(() => {
-    setImagePreviews([]);
-    if (images.length > 0) {
-      console.log('images update', images);
-      images.map((image, index) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          setImagePreviews((currentPreviews) => [...currentPreviews, reader.result]);
-        };
-        reader.readAsDataURL(image);
-      });
-    }
-  }, [images]);
 
   const ImageSelectButton = () => <button onClick={onImageSelectClick}>{buttonSelectText}</button>;
 
@@ -53,7 +69,7 @@ const ImageSelect = ({ buttonSelectText = 'Image', multipleFiles = false, classN
       multiple={multipleFiles}
       style={{ display: 'none' }}
       accept={'image/*'}
-      onChange={onImageSelect}
+      onChange={imageAdd}
     ></input>
   );
 
@@ -64,7 +80,7 @@ const ImageSelect = ({ buttonSelectText = 'Image', multipleFiles = false, classN
     </div>
   );
 
-  return { images, imagePreviews, ImageUI, onImageRemoveClick };
+  return { ImageUI: memo(ImageUI), images, imagesCount, imageSchema, imageDeleteAll, imageDeleteByIndex };
 };
 
 export default ImageSelect;
