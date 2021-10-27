@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, Fragment } from 'react';
-import './ImageSelect.css';
+import { useEffect, useRef, useState } from 'react';
 
-const ImageSelect = ({ buttonText = 'Upload Image', preview = false }) => {
-  const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+const ImageSelect = ({ buttonSelectText = 'Image', multipleFiles = false, className = '' }) => {
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const [images, setImages] = useState([]);
   const fileInputRef = useRef();
 
   const onImageSelectClick = (event) => {
@@ -11,76 +10,61 @@ const ImageSelect = ({ buttonText = 'Upload Image', preview = false }) => {
     fileInputRef.current.click();
   };
 
-  const onImageRemoveClick = (event) => {
-    event.preventDefault();
-    setImage(null);
+  const onImageRemoveClick = (id) => {
+    console.log('@image remove id', id);
+
+    setImages((currentImages) => currentImages.filter((image, index) => index !== id));
   };
 
-  const onImageChange = (event) => {
-    const file = event.target.files[0];
+  const onImageSelect = (event) => {
+    let files;
+    let fileIndex;
 
-    if (file && file.type.substring(0, 5) === 'image') {
-      setImage(file);
-    } else {
-      setImage(null);
+    files = event.target.files;
+
+    for (fileIndex = 0; fileIndex < files.length; fileIndex++) {
+      const currentFile = files[fileIndex];
+      if (currentFile && currentFile.type.substring(0, 5) === 'image') {
+        setImages((currentFiles) => [...currentFiles, currentFile]);
+      }
     }
   };
 
   useEffect(() => {
-    if (image) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(image);
-    } else {
-      setImagePreview(null);
+    setImagePreviews([]);
+    if (images.length > 0) {
+      console.log('images update', images);
+      images.map((image, index) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setImagePreviews((currentPreviews) => [...currentPreviews, reader.result]);
+        };
+        reader.readAsDataURL(image);
+      });
     }
-  }, [image]);
+  }, [images]);
 
-  const ImageSelectButton = ({ buttonText = 'Upload Image' }) => (
-    <button className="image-select__btn" onClick={onImageSelectClick}>
-      {buttonText}
-    </button>
-  );
-
-  const ImagePreview = ({ imgSrc }) => (
-    <Fragment>
-      <button className="image-select_remove" onClick={onImageRemoveClick}>
-        X
-      </button>
-      <img
-        className="image-select__img"
-        src={imgSrc}
-        width="50%"
-        height="auto"
-        alt="selected-img"
-        onClick={onImageSelectClick}
-      />
-    </Fragment>
-  );
+  const ImageSelectButton = () => <button onClick={onImageSelectClick}>{buttonSelectText}</button>;
 
   const InputImage = () => (
     <input
       ref={fileInputRef}
       type="file"
+      multiple={multipleFiles}
       style={{ display: 'none' }}
       accept={'image/*'}
-      onChange={onImageChange}
+      onChange={onImageSelect}
     ></input>
   );
 
-  const ShowImage = () =>
-    imagePreview && preview ? <ImagePreview imgSrc={imagePreview} /> : <ImageSelectButton buttonText={buttonText} />;
-
   const ImageUI = () => (
-    <div className="container__image-select">
-      <ShowImage />
+    <div className={className}>
+      <ImageSelectButton />
       <InputImage />
     </div>
   );
 
-  return { image, imagePreview, ImageUI };
+  return { images, imagePreviews, ImageUI, onImageRemoveClick };
 };
 
 export default ImageSelect;
